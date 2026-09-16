@@ -1,0 +1,170 @@
+@import "tailwindcss";
+
+@theme {
+  --color-blue: #5b53f0;
+  --color-blue-dark: #4338d6;
+  --color-blue-light: #8f89fb;
+  --color-gold: #d4af6a;
+  --color-gold-soft: #e8cd97;
+  --color-surface: #ffffffee;
+  --color-surface-dark: #151a2ccc;
+  --color-text-primary: #14161f;
+  --color-text-secondary: #666c7d;
+  --color-border: #e2e4ee;
+  --color-green: #16a34a;
+  --color-red: #dc2626;
+  --color-amber: #d97706;
+  --font-sans: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+:root {
+  --bg: #eef0f6;
+  --card: #ffffffee;
+  --text: #14161f;
+  --text-soft: #666c7d;
+  --border: #e2e4ee;
+  --glow: 0 8px 30px rgba(91,83,240,0.16);
+  --shadow: 0 2px 10px rgba(20,22,40,0.07);
+  --glass-blur: 18px;
+  --radius: 16px;
+}
+
+[data-theme="dark"] {
+  --bg: #0a0c16;
+  --card: #151a2ccc;
+  --text: #eef0fa;
+  --text-soft: #9099b3;
+  --border: #252c46;
+  --shadow: 0 4px 18px rgba(0,0,0,0.45);
+  --glow: 0 10px 40px rgba(124,108,240,0.28);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overscroll-behavior: none;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--text);
+  transition: background 0.25s, color 0.25s;
+  position: relative;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(760px 520px at 12% -8%, rgba(91,83,240,0.12), transparent 60%),
+    radial-gradient(680px 480px at 108% 12%, rgba(212,175,106,0.08), transparent 55%);
+  filter: blur(0.5px);
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.02;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+
+#root {
+  max-width: 520px;
+  margin: 0 auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 1;
+}
+
+.glass {
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes rankupPop {
+  0% { transform: scale(0.85); opacity: 0; }
+  60% { transform: scale(1.04); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+
+@keyframes confettiFall {
+  0% { transform: translateY(-10px) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+
+@keyframes countUp {
+  from { opacity: 0; transform: scale(0.5); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-fadeIn { animation: fadeIn 0.3s ease; }
+.animate-slideUp { animation: slideUp 0.4s ease; }
+.animate-shake { animation: shake 0.4s ease; }
+.animate-rankup { animation: rankupPop 0.5s ease; }
+.animate-countUp { animation: countUp 0.6s ease; }
+.animate-pulse-warn { animation: pulse 0.6s infinite; }
+
+.skeleton {
+  background: linear-gradient(90deg, var(--border) 25%, transparent 50%, var(--border) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+.confetti-piece {
+  position: fixed;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  animation: confettiFall 1.5s ease-out forwards;
+  z-index: 100;
+  pointer-events: none;
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
