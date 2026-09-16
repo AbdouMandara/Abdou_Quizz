@@ -157,7 +157,7 @@ export function Quiz({ questions, mode, onFinish }: QuizProps) {
   const progress = ((currentIndex + 1) / questions.length) * 100;
 
   return (
-    <div className="animate-fadeIn px-4 pt-3 pb-24">
+    <div className="px-4 pt-3 pb-24">
       {/* Progress bar */}
       <div className="flex items-center gap-2.5 mb-3">
         <span className="text-[11px] font-bold px-2.5 py-1 rounded-full border"

@@ -1,6 +1,9 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, createContext, useContext } from "react";
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router";
+import { CSSTransition, SwitchTransition } from "react-transition-group";
 import { useTheme } from "./hooks/useTheme";
 import { useGameState, useOnboarding, useToast } from "./hooks/useGameState";
+import { useDirection } from "./hooks/useDirection";
 import { generateQuiz, generateDynamicQuiz } from "./utils/quiz";
 import { soundBoss, soundLevelUp, soundBadgeUnlock, hapticLight } from "./utils/sounds";
 import { BADGES, type BadgeStats } from "./data/badges";
@@ -21,16 +24,190 @@ import { ProfileSelect } from "./pages/ProfileSelect";
 import { Stats } from "./pages/Stats";
 import { Settings } from "./pages/Settings";
 
-type Page = "home" | "categories" | "level-select" | "quiz" | "results" | "profile" | "profile-select" | "stats" | "settings";
+// ─── Shared quiz state context ─────────────────────────────────────
+export interface QuizContextValue {
+  selectedCategory: string;
+  setSelectedCategory: (cat: string) => void;
+  quizQuestions: any[];
+  quizMode: string;
+  quizAnswers: (number | null)[];
+  quizScore: number;
+  quizXp: number;
+  quizMaxStreak: number;
+  startQuiz: (category: string, level: string, mode: string, count: number) => void;
+  finishQuiz: (answers: (number | null)[], timePerQuestion: number) => void;
+  replayQuiz: () => void;
+}
 
-function App() {
+const QuizContext = createContext<QuizContextValue | null>(null);
+export function useQuizContext() {
+  const ctx = useContext(QuizContext);
+  if (!ctx) throw new Error("useQuizContext must be used inside QuizProvider");
+  return ctx;
+}
+
+// ─── Layout with animated transitions ──────────────────────────────
+const HIDE_NAV_ROUTES = ["/quiz", "/results"];
+
+function AppLayout() {
+  const location = useLocation();
+  const { direction, goTo, goBack } = useDirection();
   const { dark, toggle: toggleTheme } = useTheme();
   const { state, updateState, resetState } = useGameState();
-  const { showOnboarding, finishOnboarding } = useOnboarding();
-  const { toast, showToast } = useToast();
+  const { toast } = useToast();
+  const nodeRef = useLocation(); // dummy ref for CSSTransition
+  const locationKey = location.pathname + location.search;
 
-  const [page, setPage] = useState<Page>("home");
-  const [selectedCategory, setSelectedCategory] = useState<string>("culture");
+  const quizCtx = useContext(QuizContext);
+  const showNav = !HIDE_NAV_ROUTES.some(r => location.pathname.startsWith(r));
+
+  // Determine CSS class for current direction
+  const transitionClass = `slide-${direction}`;
+
+  return (
+    <>
+      <TopBar
+        title="NEO QUIZ"
+        dark={dark}
+        onToggleTheme={toggleTheme}
+        showBack={!["/", "/categories", "/stats", "/profile", "/settings"].includes(location.pathname)}
+        onBack={() => goBack("/")}
+      />
+
+      <div className="route-wrapper">
+        <SwitchTransition mode="out-in">
+          <CSSTransition
+            key={locationKey}
+            classNames={transitionClass}
+            timeout={350}
+            nodeRef={nodeRef as any}
+          >
+            <div key={locationKey}>
+              <Routes location={location}>
+                <Route path="/" element={
+                  <Home state={state} onNavigate={(p) => goTo(p === "categories" ? "/categories" : p === "stats" ? "/stats" : p === "profile" ? "/profile" : "/")} />
+                } />
+                <Route path="/categories" element={
+                  <Categories onSelect={(catId) => {
+                    quizCtx?.setSelectedCategory(catId);
+                    goTo(`/categories/${catId}/level`);
+                  }} />
+                } />
+                <Route path="/categories/:categoryId/level" element={
+                  <LevelSelectWrapper />
+                } />
+                <Route path="/quiz" element={
+                  <QuizWrapper />
+                } />
+                <Route path="/results" element={
+                  <ResultsWrapper />
+                } />
+                <Route path="/profile" element={
+                  <Profile state={state} onNavigate={(p) => goTo(p === "profile-select" ? "/profile/select" : p === "settings" ? "/settings" : "/")} />
+                } />
+                <Route path="/profile/select" element={
+                  <ProfileSelectWrapper />
+                } />
+                <Route path="/stats" element={
+                  <Stats state={state} />
+                } />
+                <Route path="/settings" element={
+                  <Settings
+                    state={state}
+                    dark={dark}
+                    onToggleTheme={toggleTheme}
+                    onToggleSound={() => updateState(prev => ({ prefs: { ...prev.prefs, sound: !prev.prefs.sound } }))}
+                    onToggleAnim={() => updateState(prev => ({ prefs: { ...prev.prefs, anim: !prev.prefs.anim } }))}
+                    onReset={resetState}
+                  />
+                } />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </div>
+          </CSSTransition>
+        </SwitchTransition>
+      </div>
+
+      {showNav && (
+        <BottomNav />
+      )}
+
+      <Toast message={toast.message} visible={toast.visible} />
+    </>
+  );
+}
+
+// ─── Wrapper components to connect context ──────────────────────────
+function LevelSelectWrapper() {
+  const { selectedCategory, startQuiz } = useQuizContext();
+  const { goBack } = useDirection();
+  return (
+    <LevelSelect
+      category={selectedCategory}
+      onStart={startQuiz}
+      onBack={() => goBack("/categories")}
+    />
+  );
+}
+
+function QuizWrapper() {
+  const { quizQuestions, quizMode, finishQuiz } = useQuizContext();
+  if (quizQuestions.length === 0) return <Navigate to="/categories" replace />;
+  return (
+    <Quiz
+      questions={quizQuestions}
+      mode={quizMode}
+      onFinish={finishQuiz}
+    />
+  );
+}
+
+function ResultsWrapper() {
+  const { quizQuestions, quizAnswers, quizScore, quizXp, quizMaxStreak, replayQuiz } = useQuizContext();
+  const { state } = useGameState();
+  const { goTo } = useDirection();
+
+  const pct = quizQuestions.length > 0
+    ? Math.round((quizAnswers.filter((a, i) => a === quizQuestions[i]?.correct).length / quizQuestions.length) * 100)
+    : 0;
+
+  return (
+    <Results
+      questions={quizQuestions}
+      answers={quizAnswers}
+      score={quizScore}
+      xpGained={quizXp}
+      maxStreak={quizMaxStreak}
+      state={state}
+      onReplay={replayQuiz}
+      onHome={() => goTo("/", pct >= 80)}
+      onStats={() => goTo("/stats")}
+    />
+  );
+}
+
+function ProfileSelectWrapper() {
+  const { state, updateState } = useGameState();
+  const { showToast } = useToast();
+  const { goTo } = useDirection();
+  return (
+    <ProfileSelect
+      current={state.profileType}
+      onSelect={(type) => {
+        updateState(() => ({ profileType: type }));
+        showToast(`Profil mis à jour : ${type}`);
+        goTo("/profile");
+      }}
+    />
+  );
+}
+
+// ─── Root App with providers ────────────────────────────────────────
+function App() {
+  const { showOnboarding, finishOnboarding } = useOnboarding();
+  const { state, updateState } = useGameState();
+
+  const [selectedCategory, setSelectedCategory] = useState("culture");
   const [quizQuestions, setQuizQuestions] = useState<any[]>([]);
   const [quizMode, setQuizMode] = useState("classique");
   const [quizAnswers, setQuizAnswers] = useState<(number | null)[]>([]);
@@ -38,18 +215,7 @@ function App() {
   const [quizXp, setQuizXp] = useState(0);
   const [quizMaxStreak, setQuizMaxStreak] = useState(0);
 
-  const navigate = useCallback((p: string) => {
-    setPage(p as Page);
-    window.scrollTo(0, 0);
-  }, []);
-
-  const handleSelectCategory = useCallback((catId: string) => {
-    setSelectedCategory(catId);
-    setPage("level-select");
-    window.scrollTo(0, 0);
-  }, []);
-
-  const handleStartQuiz = useCallback((category: string, level: string, mode: string, count: number) => {
+  const startQuiz = useCallback((category: string, level: string, mode: string, count: number) => {
     let questions;
     if (["challenge", "extreme", "survie"].includes(mode)) {
       questions = generateDynamicQuiz(mode, count, state.recentGlobalKeys);
@@ -58,20 +224,16 @@ function App() {
     }
     setQuizQuestions(questions);
     setQuizMode(mode);
-    setPage("quiz");
-    window.scrollTo(0, 0);
-
     if (["challenge", "extreme", "survie"].includes(mode)) {
       setTimeout(() => soundBoss(), 300);
     }
   }, [state.recentGlobalKeys]);
 
-  const handleFinishQuiz = useCallback((answers: (number | null)[], timePerQuestion: number) => {
+  const finishQuiz = useCallback((answers: (number | null)[], timePerQuestion: number) => {
     const correct = answers.filter((a, i) => a === quizQuestions[i]?.correct).length;
     const total = quizQuestions.length;
     const baseXp = correct * 10;
 
-    // Calculate score and streak
     let score = 0;
     let streak = 0;
     let maxStreak = 0;
@@ -92,7 +254,6 @@ function App() {
     const hadPerfect = correct === total;
     const hadFastAnswer = timePerQuestion < 5;
 
-    // Update global state
     updateState(prev => {
       const newXp = prev.xp + baseXp;
       const newLevel = getLevelFromXP(newXp);
@@ -100,12 +261,10 @@ function App() {
       const prevRank = getRankForLevel(prevLevel);
       const newRank = getRankForLevel(newLevel);
 
-      // Rank up sounds
       if (newRank.letter !== prevRank.letter) {
         setTimeout(() => { soundLevelUp(); hapticLight(); }, 800);
       }
 
-      // Badge checks
       const stats: BadgeStats = {
         gamesPlayed: prev.gamesPlayed + 1,
         maxStreak: Math.max(prev.maxStreak, maxStreak),
@@ -128,7 +287,6 @@ function App() {
         setTimeout(() => { soundBadgeUnlock(); hapticLight(); }, 1200);
       }
 
-      // Category stats
       const catStats = { ...prev.categoryStats };
       quizQuestions.forEach((q, i) => {
         if (!catStats[q.category]) catStats[q.category] = { correct: 0, total: 0 };
@@ -136,7 +294,6 @@ function App() {
         if (answers[i] === q.correct) catStats[q.category].correct++;
       });
 
-      // History
       const newHistory = [...prev.history, {
         date: new Date().toISOString(),
         category: selectedCategory,
@@ -146,10 +303,7 @@ function App() {
         correct,
       }].slice(-20);
 
-      // Categories played
       const catsPlayed = [...new Set([...prev.categoriesPlayed, selectedCategory])];
-
-      // Recent keys
       const newKeys = [...prev.recentGlobalKeys, ...quizQuestions.map(q => q.question)].slice(-60);
 
       return {
@@ -178,105 +332,38 @@ function App() {
     setQuizScore(score);
     setQuizXp(baseXp);
     setQuizMaxStreak(maxStreak);
-    setPage("results");
-    window.scrollTo(0, 0);
   }, [quizQuestions, selectedCategory, quizMode, updateState]);
 
-  const handleReplay = useCallback(() => {
+  const replayQuiz = useCallback(() => {
     const q = quizQuestions;
     if (q.length > 0) {
       const first = q[0];
-      handleStartQuiz(selectedCategory, first.level ?? "facile", quizMode, q.length);
+      startQuiz(selectedCategory, first.level ?? "facile", quizMode, q.length);
     }
-  }, [quizQuestions, selectedCategory, quizMode, handleStartQuiz]);
-
-  const handleToggleSound = useCallback(() => {
-    updateState(prev => ({
-      prefs: { ...prev.prefs, sound: !prev.prefs.sound },
-    }));
-  }, [updateState]);
-
-  const handleToggleAnim = useCallback(() => {
-    updateState(prev => ({
-      prefs: { ...prev.prefs, anim: !prev.prefs.anim },
-    }));
-  }, [updateState]);
-
-  const handleSelectProfile = useCallback((type: string) => {
-    updateState(() => ({ profileType: type }));
-    setPage("profile");
-    showToast(`Profil mis à jour : ${type}`);
-  }, [updateState, showToast]);
+  }, [quizQuestions, selectedCategory, quizMode, startQuiz]);
 
   if (showOnboarding) {
     return <Onboarding onFinish={finishOnboarding} />;
   }
 
   return (
-    <>
-      <TopBar title="NEO QUIZ" dark={dark} onToggleTheme={toggleTheme} />
-
-      <div className="flex-1">
-        {page === "home" && (
-          <Home state={state} onNavigate={navigate} />
-        )}
-        {page === "categories" && (
-          <Categories onSelect={handleSelectCategory} />
-        )}
-        {page === "level-select" && (
-          <LevelSelect
-            category={selectedCategory}
-            onStart={handleStartQuiz}
-            onBack={() => navigate("categories")}
-          />
-        )}
-        {page === "quiz" && quizQuestions.length > 0 && (
-          <Quiz
-            questions={quizQuestions}
-            mode={quizMode}
-            onFinish={handleFinishQuiz}
-          />
-        )}
-        {page === "results" && (
-          <Results
-            questions={quizQuestions}
-            answers={quizAnswers}
-            score={quizScore}
-            xpGained={quizXp}
-            maxStreak={quizMaxStreak}
-            state={state}
-            onReplay={handleReplay}
-            onHome={() => navigate("home")}
-            onStats={() => navigate("stats")}
-          />
-        )}
-        {page === "profile" && (
-          <Profile state={state} onNavigate={navigate} />
-        )}
-        {page === "profile-select" && (
-          <ProfileSelect current={state.profileType} onSelect={handleSelectProfile} />
-        )}
-        {page === "stats" && (
-          <Stats state={state} />
-        )}
-        {page === "settings" && (
-          <Settings
-            state={state}
-            dark={dark}
-            onToggleTheme={toggleTheme}
-            onToggleSound={handleToggleSound}
-            onToggleAnim={handleToggleAnim}
-            onReset={resetState}
-          />
-        )}
-      </div>
-
-      {!["quiz", "results", "level-select"].includes(page) && (
-        <BottomNav current={page} onNavigate={navigate} />
-      )}
-
-      <Toast message={toast.message} visible={toast.visible} />
-    </>
+    <BrowserRouter>
+      <QuizContext.Provider value={{
+        selectedCategory,
+        setSelectedCategory,
+        quizQuestions,
+        quizMode,
+        quizAnswers,
+        quizScore,
+        quizXp,
+        quizMaxStreak,
+        startQuiz,
+        finishQuiz,
+        replayQuiz,
+      }}>
+        <AppLayout />
+      </QuizContext.Provider>
+    </BrowserRouter>
   );
 }
 

@@ -96,7 +96,7 @@ export function Results({ questions, answers, score, xpGained, maxStreak, state,
   }, []);
 
   return (
-    <div className="animate-fadeIn px-4 pt-5 pb-24">
+    <div className="px-4 pt-5 pb-24">
       {showConfetti && <Confetti />}
 
       {/* Hero */}

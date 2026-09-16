@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router";
 import { PROFILE_TYPES } from "../data/profiles";
 import { BADGES } from "../data/badges";
 import { RANKS, getRankForLevel, xpProgress } from "../data/ranks";
@@ -7,10 +8,11 @@ import type { GameState } from "../hooks/useGameState";
 
 interface ProfileProps {
   state: GameState;
-  onNavigate: (page: string) => void;
+  onNavigate?: (page: string) => void;
 }
 
-export function Profile({ state, onNavigate }: ProfileProps) {
+export function Profile({ state }: ProfileProps) {
+  const navigate = useNavigate();
   const profile = PROFILE_TYPES.find(p => p.id === state.profileType) ?? PROFILE_TYPES[0];
   const { level } = xpProgress(state.xp);
   const currentRank = getRankForLevel(level);
@@ -20,12 +22,11 @@ export function Profile({ state, onNavigate }: ProfileProps) {
     .slice(0, 3);
 
   return (
-    <div className="animate-fadeIn px-4 pt-4 pb-24">
+    <div className="px-4 pt-4 pb-24">
       <div className="text-[15px] font-extrabold mb-4" style={{ color: "var(--text)" }}>👤 Profil</div>
 
-      {/* Profile type card */}
       <button
-        onClick={() => onNavigate("profile-select")}
+        onClick={() => { soundClick(); navigate("/profile/select"); }}
         className="flex items-center gap-3 w-full p-3.5 rounded-2xl border cursor-pointer mb-3.5"
         style={{ background: "var(--card)", borderColor: "var(--border)", boxShadow: "var(--shadow)" }}
       >
@@ -37,12 +38,10 @@ export function Profile({ state, onNavigate }: ProfileProps) {
         <span className="text-[12px] font-bold" style={{ color: "#5b53f0" }}>Changer ›</span>
       </button>
 
-      {/* XP & Rank */}
       <div className="mb-5">
         <XPBar xp={state.xp} />
       </div>
 
-      {/* Rank progression */}
       <div className="text-[13px] font-extrabold mb-3" style={{ color: "var(--text)" }}>
         🏵️ Progression des rangs
       </div>
@@ -75,7 +74,6 @@ export function Profile({ state, onNavigate }: ProfileProps) {
         })}
       </div>
 
-      {/* Stats */}
       <div className="flex gap-3 mb-5">
         <div className="flex-1 text-center rounded-2xl p-3 border" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
           <div className="text-lg font-extrabold" style={{ color: "#5b53f0" }}>{state.bestScore}</div>
@@ -93,7 +91,6 @@ export function Profile({ state, onNavigate }: ProfileProps) {
         </div>
       </div>
 
-      {/* Badges */}
       <div className="text-[13px] font-extrabold mb-3" style={{ color: "var(--text)" }}>🏅 Badges</div>
       <div className="grid grid-cols-3 gap-2.5 mb-5">
         {BADGES.map(badge => {
@@ -109,7 +106,7 @@ export function Profile({ state, onNavigate }: ProfileProps) {
       </div>
 
       <button
-        onClick={() => { soundClick(); onNavigate("settings"); }}
+        onClick={() => { soundClick(); navigate("/settings"); }}
         className="w-full py-3 border rounded-2xl text-sm font-bold cursor-pointer"
         style={{ background: "var(--card)", color: "var(--text)", borderColor: "var(--border)" }}
       >

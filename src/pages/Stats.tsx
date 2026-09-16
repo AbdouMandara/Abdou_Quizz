@@ -21,7 +21,7 @@ export function Stats({ state }: StatsProps) {
   const recentHistory = state.history.slice(-10).reverse();
 
   return (
-    <div className="animate-fadeIn px-4 pt-4 pb-24">
+    <div className="px-4 pt-4 pb-24">
       <div className="text-[15px] font-extrabold mb-4" style={{ color: "var(--text)" }}>📊 Statistiques</div>
 
       <div className="grid grid-cols-3 gap-2.5 mb-3">

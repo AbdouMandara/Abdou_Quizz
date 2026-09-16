@@ -26,7 +26,7 @@ export function LevelSelect({ category, onStart, onBack }: LevelSelectProps) {
   };
 
   return (
-    <div className="animate-fadeIn px-4 pt-4 pb-24">
+    <div className="px-4 pt-4 pb-24">
       <div className="text-[15px] font-extrabold mb-3" style={{ color: "var(--text)" }}>
         Sélection du niveau
       </div>

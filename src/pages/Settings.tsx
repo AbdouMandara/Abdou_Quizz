@@ -12,7 +12,7 @@ interface SettingsProps {
 
 export function Settings({ state, dark, onToggleTheme, onToggleSound, onToggleAnim, onReset }: SettingsProps) {
   return (
-    <div className="animate-fadeIn px-4 pt-4 pb-24">
+    <div className="px-4 pt-4 pb-24">
       <div className="text-[15px] font-extrabold mb-4" style={{ color: "var(--text)" }}>⚙️ Paramètres</div>
 
       <SettingsRow

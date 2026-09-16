@@ -1,14 +1,15 @@
+import { useNavigate, useLocation } from "react-router";
 import { soundClick } from "../utils/sounds";
 
 interface NavItem {
-  id: string;
+  path: string;
   label: string;
   icon: React.ReactNode;
 }
 
 const NAV_ITEMS: NavItem[] = [
   {
-    id: "home",
+    path: "/",
     label: "Accueil",
     icon: (
       <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -18,7 +19,7 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
-    id: "categories",
+    path: "/categories",
     label: "Catégories",
     icon: (
       <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -28,7 +29,7 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
-    id: "stats",
+    path: "/stats",
     label: "Stats",
     icon: (
       <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -39,7 +40,7 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
-    id: "profile",
+    path: "/profile",
     label: "Profil",
     icon: (
       <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -49,7 +50,7 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
-    id: "settings",
+    path: "/settings",
     label: "Réglages",
     icon: (
       <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -60,12 +61,15 @@ const NAV_ITEMS: NavItem[] = [
   },
 ];
 
-interface BottomNavProps {
-  current: string;
-  onNavigate: (page: string) => void;
-}
+export function BottomNav() {
+  const navigate = useNavigate();
+  const location = useLocation();
 
-export function BottomNav({ current, onNavigate }: BottomNavProps) {
+  const isActive = (path: string) => {
+    if (path === "/") return location.pathname === "/";
+    return location.pathname.startsWith(path);
+  };
+
   return (
     <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[520px] flex justify-around py-2 px-1 z-30 glass"
       style={{
@@ -75,10 +79,10 @@ export function BottomNav({ current, onNavigate }: BottomNavProps) {
       }}>
       {NAV_ITEMS.map((item) => (
         <button
-          key={item.id}
-          onClick={() => { soundClick(); onNavigate(item.id); }}
-          className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded-xl border-none bg-transparent cursor-pointer text-[10px] transition-colors duration-150 ${current === item.id ? "text-blue-500" : ""}`}
-          style={{ color: current === item.id ? "#5b53f0" : "var(--text-soft)" }}
+          key={item.path}
+          onClick={() => { soundClick(); navigate(item.path); }}
+          className="flex flex-col items-center gap-0.5 px-2 py-1 rounded-xl border-none bg-transparent cursor-pointer text-[10px] transition-colors duration-150"
+          style={{ color: isActive(item.path) ? "#5b53f0" : "var(--text-soft)" }}
         >
           {item.icon}
           <span>{item.label}</span>

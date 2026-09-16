@@ -8,7 +8,7 @@ interface ProfileSelectProps {
 
 export function ProfileSelect({ current, onSelect }: ProfileSelectProps) {
   return (
-    <div className="animate-fadeIn px-4 pt-4 pb-24">
+    <div className="px-4 pt-4 pb-24">
       <div className="text-[15px] font-extrabold mb-1" style={{ color: "var(--text)" }}>Quel est ton profil ?</div>
       <p className="text-[13px] mb-4" style={{ color: "var(--text-soft)" }}>
         Tu pourras en changer à tout moment depuis ton profil.
